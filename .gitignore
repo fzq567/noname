@@ -13,6 +13,9 @@ extension/
 !extension/蒸蒸日上/
 !extension/意面瞎搞/
 
+# Qoder Wiki 自动生成的文档，无需纳入版本管理
+.qoder/repowiki/
+
 dist
 output
 node_modules
