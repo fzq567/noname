@@ -10,8 +10,21 @@ extension/
 !extension/欢乐卡牌/
 !extension/玩点论杀/
 !extension/英雄杀/
-!extension/蒸蒸日上/
-!extension/意面瞎搞/
+
+# 注：蒸蒸日上/意面瞎搞 已迁移到 apps/core/extension/
+# 原 extension/ 下的白名单已移除，新位置的白名单见下方
+
+apps/core/extension/
+!apps/core/extension/boss/
+!apps/core/extension/cardpile/
+!apps/core/extension/coin/
+!apps/core/extension/3D精选/
+!apps/core/extension/杀海拾遗/
+!apps/core/extension/欢乐卡牌/
+!apps/core/extension/玩点论杀/
+!apps/core/extension/英雄杀/
+!apps/core/extension/蒸蒸日上/
+!apps/core/extension/意面瞎搞/
 
 # Qoder Wiki 自动生成的文档，无需纳入版本管理
 .qoder/repowiki/
