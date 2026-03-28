@@ -11,10 +11,17 @@ extension/
 !extension/玩点论杀/
 !extension/英雄杀/
 
-# 注：蒸蒸日上/意面瞎搞 已迁移到 apps/core/extension/
-# 原 extension/ 下的白名单已移除，新位置的白名单见下方
+# 注：蒸蒸日上 已改为 submodule，意面瞎搞已合并到蒸蒸日上
+# apps/core/extension/ 下的扩展通过白名单管理，避免跟踪临时扩展
 
-apps/core/extension/
+# 注：蒸蒸日上 已改为 submodule
+# 其他扩展通过白名单管理
+
+# 根目录 extension/ 已废弃（monorepo 重构后）
+extension/
+
+# apps/core/extension/ 下的扩展白名单
+!apps/core/extension/
 !apps/core/extension/boss/
 !apps/core/extension/cardpile/
 !apps/core/extension/coin/
@@ -24,7 +31,6 @@ apps/core/extension/
 !apps/core/extension/玩点论杀/
 !apps/core/extension/英雄杀/
 !apps/core/extension/蒸蒸日上/
-!apps/core/extension/意面瞎搞/
 
 # Qoder Wiki 自动生成的文档，无需纳入版本管理
 .qoder/repowiki/
