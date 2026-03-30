@@ -502,6 +502,7 @@ window.noname_character_rank = {
 		"tw_hejin",
 		"zhaoyan",
 		"shen_sunquan",
+		"o_sunquan",
 		"junk_sunquan",
 		"zhaoyǎn",
 		"tw_caoxiu",
@@ -539,6 +540,7 @@ window.noname_character_rank = {
 		"yj_zhenji",
 	],
 	bp: [
+		"wxdl_caozhi",
 		"shie",
 		"dc_xia_wangyue",
 		"ol_xiahoushi",
@@ -1114,6 +1116,7 @@ window.noname_character_rank = {
 		"pot_zanghong",
 	],
 	b: [
+		"zhuji",
 		"ylyg_dianwei",
 		"ylyg_pangtong",
 		"ol_huangfusong",
@@ -2397,6 +2400,7 @@ window.noname_character_rank = {
 			"shen_jiangwei",
 			"ol_puyuan",
 			"shen_sunquan",
+			"o_sunquan",
 			"junk_sunquan",
 			"shen_machao",
 			"tw_shen_guanyu",
@@ -2626,6 +2630,7 @@ window.noname_character_rank = {
 			"v_sunce",
 		],
 		epic: [
+			"wxdl_caozhi",
 			"shie",
 			"dc_xia_wangyue",
 			"hl_shen_lvbu",
@@ -3161,6 +3166,7 @@ window.noname_character_rank = {
 			"dc_sb_chunyuqiong",
 		],
 		rare: [
+			"zhuji",
 			"ylyg_dianwei",
 			"ylyg_pangtong",
 			"dc_sb_zhangren",
