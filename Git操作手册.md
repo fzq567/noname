@@ -62,6 +62,42 @@ git commit -m "merge: 同步官方仓库更新"
 git push origin main
 ```
 
+### `git merge upstream/main` 命令详解
+
+```
+git merge upstream/main
+         └─────┬─────┘
+               │
+               └── 将 upstream 远程仓库的 main 分支
+                   合并到【当前所在分支】
+```
+
+**合并方向**：`upstream/main`（官方仓库）→ `当前分支`（你的本地 main）
+
+**示例流程**：
+
+```powershell
+# 查看当前分支（假设你在 main 分支）
+git branch
+# 输出: * main   ← 当前在 main 分支
+
+# 查看远程仓库配置
+git remote -v
+# 输出:
+# origin    https://github.com/fzq567/noname.git (fetch)      ← 你的 Fork
+# upstream  https://github.com/libnoname/noname.git (fetch)   ← 官方仓库
+
+# 获取官方最新代码（仅下载，不合并）
+git fetch upstream
+
+# 将官方仓库的 main 分支合并到你当前的 main 分支
+git merge upstream/main
+```
+
+**合并后状态**：
+- 你的本地 main 分支现在包含：官方新代码 + 你自己的代码
+- 然后执行 `git push origin main` 推送到你的 Fork
+
 **注意**：我们修改过的文件（`vite.config.ts`、`scripts/dev.ts`、`.gitignore` 等）可能会与无名杀官方仓库的代码有冲突，需要仔细处理。
 
 ---
