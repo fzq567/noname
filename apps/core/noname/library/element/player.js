@@ -399,6 +399,10 @@ export class Player extends HTMLDivElement {
 	 * @type {Map<string,HTMLDivElement>}
 	 */
 	tips;
+	/**
+	 * @type { import("./client.js").Client | undefined }
+	 */
+	ws;
 
 	/**
 	 * 添加视为装备
@@ -497,6 +501,9 @@ export class Player extends HTMLDivElement {
 				}
 			});
 		}
+		if (this.getCards("h").every((card, index) => hs[index] == card)) {
+			return false;
+		}
 
 		this.node.handcards1.style.visibility = "hidden";
 		this.node.handcards2.style.visibility = "hidden";
@@ -524,7 +531,7 @@ export class Player extends HTMLDivElement {
 	 * @param {(a: Card, b: Card) => number|Card[]} [sort] 排序方法，如果传的牌数组，就按数组顺序排
 	 */
 	sortHandcardOL(sort) {
-		const bool = game.me.sortHandcard(sort);
+		const bool = this.sortHandcard(sort);
 		//联机要同步手牌状态
 		if (_status.connectMode && bool !== false) {
 			if (game.online) {
@@ -534,7 +541,7 @@ export class Player extends HTMLDivElement {
 				);
 			} else {
 				game.syncHandcard(
-					game.me,
+					this,
 					this.getCards("h").map(i => i.cardid)
 				);
 			}
@@ -4142,11 +4149,14 @@ export class Player extends HTMLDivElement {
 			player.style.transform = "";
 		}, 100);
 	}
-	send() {
+	/**
+	 * @type { import("./client.js").ClientSend<this> }
+	 */
+	send(...args) {
 		if (!this.ws || this.ws.closed) {
 			return this;
 		}
-		this.ws.send.apply(this.ws, arguments);
+		this.ws.send(...args);
 		return this;
 	}
 	getId() {
@@ -4820,8 +4830,8 @@ export class Player extends HTMLDivElement {
 		}
 	}
 	/**
-	 * 获得蓄力点
-	 * @param { number } [num = 1] 获得蓄力点数
+	 * 获得蓄力值
+	 * @param { number } [num = 1] 获得蓄力值数
 	 * @param { boolean } [log] false: 不进行广播
 	 */
 	addCharge(num, log) {
@@ -4839,8 +4849,8 @@ export class Player extends HTMLDivElement {
 		}
 	}
 	/**
-	 * 移去蓄力点
-	 * @param { number } [num = 1] 移去蓄力点数
+	 * 移去蓄力值
+	 * @param { number } [num = 1] 移去蓄力值数
 	 * @param { boolean } [log] false: 不进行广播
 	 */
 	removeCharge(num, log) {
@@ -4853,8 +4863,8 @@ export class Player extends HTMLDivElement {
 		}
 	}
 	/**
-	 * 返回玩家的蓄力点数
-	 * @param { boolean } [max] true: 返回当前蓄力点与上限之差
+	 * 返回玩家的蓄力值数
+	 * @param { boolean } [max] true: 返回当前蓄力值与上限之差
 	 * @returns { number }
 	 */
 	countCharge(max) {
@@ -4867,7 +4877,7 @@ export class Player extends HTMLDivElement {
 		return this.countMark("charge");
 	}
 	/**
-	 * 获取蓄力点上限
+	 * 获取蓄力值上限
 	 */
 	getMaxCharge() {
 		let skills = game.expandSkills(this.getSkills(null, null, false).concat(lib.skill.global));
@@ -5148,127 +5158,238 @@ export class Player extends HTMLDivElement {
 		return count;
 	}
 	/**
-	 * @param { string } [arg1='h']
-	 * @param { string | Record<string, any> | ((card: Card) => boolean) } [arg2]
-	 * @returns { Iterable<Card> }
+	 * 返回玩家的牌区中的牌，默认返回手牌区的牌
+	 *
+	 * 该方法返回一个生成器，需要返回数组请使用`Player#getCards`
+	 *
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { Generator<Card> } - 经过过滤后的牌的生成器
 	 */
-	*iterableGetCards(arg1, arg2) {
-		if (typeof arg1 != "string") {
-			arg1 = "h";
+	*iterableGetCards(position, filter) {
+		if (typeof position != "string") {
+			position = "h";
 		}
+		const judgesNode = this.node.judges;
 		const getCardName = card => {
-			if (card.parentNode == this.node.judges) {
+			if (card.parentNode == judgesNode) {
 				if (card.viewAs) {
 					return card.viewAs;
 				}
 			}
 			return get.name(card);
 		};
-		let filter = card => true;
-		if (arg2) {
-			if (typeof arg2 == "string") {
-				filter = card => getCardName(card) == arg2;
-			} else if (Array.isArray(arg2)) {
-				filter = card => arg2.includes(getCardName(card));
-			} else if (typeof arg2 == "object") {
-				filter = card => {
-					for (let j in arg2) {
-						var value;
-						if (j == "type" || j == "subtype" || j == "color" || j == "suit" || j == "number") {
-							value = get[j](card);
-						} else if (j == "name") {
-							value = getCardName(card);
-						} else {
-							value = card[j];
-						}
-						if ((typeof arg2[j] == "string" && value != arg2[j]) || (Array.isArray(arg2[j]) && !arg2[j].includes(value))) {
+		let filterCard;
+		if (filter) {
+			if (typeof filter == "string") {
+				filterCard = card => getCardName(card) == filter;
+			} else if (Array.isArray(filter)) {
+				filterCard = card => filter.includes(getCardName(card));
+			} else if (typeof filter == "object") {
+				// 预计算过滤器条目，避免每张牌都重复判断 key 类型和 filterVal 类型
+				const entries = [];
+				for (const key in filter) {
+					let getter;
+					if (key == "type" || key == "subtype" || key == "color" || key == "suit" || key == "number") {
+						getter = get[key];
+					} else if (key == "name") {
+						getter = getCardName;
+					} else {
+						getter = null;
+					}
+					const filterVal = filter[key];
+					entries.push({
+						key,
+						getter,
+						filterVal,
+						isArray: Array.isArray(filterVal),
+					});
+				}
+				filterCard = card => {
+					for (const { key, getter, filterVal, isArray } of entries) {
+						const value = getter ? getter(card) : card[key];
+						if ((!isArray && value != filterVal) || (isArray && !filterVal.includes(value))) {
 							return false;
 						}
 					}
 					return true;
 				};
-			} else if (typeof arg2 == "function") {
-				filter = arg2;
+			} else if (typeof filter == "function") {
+				filterCard = filter;
 			}
 		}
-		for (let i = 0; i < arg1.length; i++) {
-			if (arg1[i] == "h") {
-				for (let card of get.iterableChildNodes(this.node.handcards1, this.node.handcards2)) {
-					if (!card.classList.contains("removing") && !card.classList.contains("glows") && filter(card)) {
-						yield card;
+		const useFilter = typeof filterCard === "function";
+
+		// 预遍历position，记录是否包含手牌区和特殊牌区，以决定是否需要在遍历时检查glows类
+		let hasH = false;
+		let hasS = false;
+		for (const pos of position) {
+			switch (pos) {
+				case "h":
+					hasH = true;
+					break;
+				case "s":
+					hasS = true;
+					break;
+			}
+		}
+		// 只有同时要手牌和特殊牌时才需要区分 glows
+		const needGlowsCheck = !hasH || !hasS;
+
+		// 一些简单的去重
+		let handDone = false;
+		let equipDone = false;
+		let judgeDone = false;
+		let expandDone = false;
+		for (const pos of position) {
+			switch (pos) {
+				case "h":
+				case "s": {
+					if (handDone) {
+						break;
 					}
+					handDone = true;
+					const hc1 = this.node.handcards1;
+					const hc2 = this.node.handcards2;
+					if (needGlowsCheck) {
+						for (const card of get.iterableChildNodes(hc1, hc2)) {
+							if (card.classList.contains("removing")) {
+								continue;
+							}
+							const glows = card.classList.contains("glows");
+							if ((hasH && !glows) || (hasS && glows)) {
+								if (!useFilter || filterCard(card)) {
+									yield card;
+								}
+							}
+						}
+					} else {
+						for (const card of get.iterableChildNodes(hc1, hc2)) {
+							if (card.classList.contains("removing")) {
+								continue;
+							}
+							if (!useFilter || filterCard(card)) {
+								yield card;
+							}
+						}
+					}
+					break;
 				}
-			} else if (arg1[i] == "s") {
-				for (let card of get.iterableChildNodes(this.node.handcards1, this.node.handcards2)) {
-					if (!card.classList.contains("removing") && card.classList.contains("glows") && filter(card)) {
-						yield card;
+				case "e": {
+					if (equipDone) {
+						break;
 					}
+					equipDone = true;
+					const equips = this.node.equips;
+					for (const card of get.iterableChildNodes(equips)) {
+						if (card.classList.contains("removing") || card.classList.contains("feichu") || card.classList.contains("emptyequip")) {
+							continue;
+						}
+						if (!useFilter || filterCard(card)) {
+							yield card;
+						}
+					}
+					break;
 				}
-			} else if (arg1[i] == "e") {
-				for (let card of get.iterableChildNodes(this.node.equips)) {
-					if (!card.classList.contains("removing") && !card.classList.contains("feichu") && !card.classList.contains("emptyequip") && filter(card)) {
-						yield card;
+				case "j": {
+					if (judgeDone) {
+						break;
 					}
+					judgeDone = true;
+					for (const card of get.iterableChildNodes(judgesNode)) {
+						if (card.classList.contains("removing") || card.classList.contains("feichu")) {
+							continue;
+						}
+						if (!useFilter || filterCard(card)) {
+							yield card;
+						}
+					}
+					break;
 				}
-			} else if (arg1[i] == "j") {
-				for (let card of get.iterableChildNodes(this.node.judges)) {
-					if (!card.classList.contains("removing") && !card.classList.contains("feichu") && filter(card)) {
-						yield card;
+				case "x": {
+					if (expandDone) {
+						break;
 					}
-				}
-			} else if (arg1[i] == "x") {
-				for (let card of get.iterableChildNodes(this.node.expansions)) {
-					if (!card.classList.contains("removing") && filter(card)) {
-						yield card;
+					expandDone = true;
+					const expansions = this.node.expansions;
+					for (const card of get.iterableChildNodes(expansions)) {
+						if (card.classList.contains("removing")) {
+							continue;
+						}
+						if (!useFilter || filterCard(card)) {
+							yield card;
+						}
 					}
+					break;
 				}
 			}
 		}
 	}
 	/**
-	 * @param { string } [arg1='h']
-	 * @param { string | Record<string, any> | ((card: Card) => boolean) } [arg2]
-	 * @returns { Card[] }
+	 * 返回玩家的牌区中的牌，默认返回手牌区的牌
+	 *
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { Card[] } - 经过过滤后的牌的数组
 	 */
-	getCards(arg1, arg2) {
-		return Array.from(this.iterableGetCards(arg1, arg2));
+	getCards(position, filter) {
+		return Array.from(this.iterableGetCards(position, filter));
 	}
 	/**
-	 * @param { Player } player
-	 * @param { string } [arg1]
-	 * @param { string } [arg2]
-	 * @returns { Generator<Card, void, unknown> }
+	 * 返回玩家的牌区中能被给定角色弃置的牌，默认返回手牌区的牌
+	 *
+	 * 该方法返回一个生成器，需要返回数组请使用`Player#getDiscardableCards`
+	 *
+	 * @param { Player } player - 进行弃置的角色
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { Generator<Card> } - 经过过滤后的牌的生成器
 	 */
-	*iterableGetDiscardableCards(player, arg1, arg2) {
-		for (let card of this.iterableGetCards(arg1, arg2)) {
+	*iterableGetDiscardableCards(player, position, filter) {
+		for (const card of this.iterableGetCards(position, filter)) {
 			if (lib.filter.canBeDiscarded(card, player, this)) {
 				yield card;
 			}
 		}
 	}
-	getDiscardableCards(player, arg1, arg2) {
-		return Array.from(this.iterableGetDiscardableCards(player, arg1, arg2));
+	/**
+	 * 返回玩家的牌区中能被给定角色弃置的牌，默认返回手牌区的牌
+	 *
+	 * @param { Player } player - 进行弃置的角色
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { Card[] } - 经过过滤后的牌的数组
+	 */
+	getDiscardableCards(player, position, filter) {
+		return Array.from(this.iterableGetDiscardableCards(player, position, filter));
 	}
 	/**
-	 * @param {Parameters<lib['filter']['canBeGained']>[1]} player
-	 * @param {Parameters<this['iterableGetCards']>[0]} arg1
-	 * @param {Parameters<this['iterableGetCards']>[1]} arg2
+	 * 返回玩家的牌区中能被给定角色获得的牌，默认返回手牌区的牌
+	 *
+	 * 该方法返回一个生成器，需要返回数组请使用`Player#getGainableCards`
+	 *
+	 * @param { Player } player - 进行弃置的角色
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { Generator<Card> } - 经过过滤后的牌的生成器
 	 */
-	*iterableGetGainableCards(player, arg1, arg2) {
-		for (let card of this.iterableGetCards(arg1, arg2)) {
+	*iterableGetGainableCards(player, position, filter) {
+		for (const card of this.iterableGetCards(position, filter)) {
 			if (lib.filter.canBeGained(card, player, this)) {
 				yield card;
 			}
 		}
 	}
 	/**
+	 * 返回玩家的牌区中能被给定角色获得的牌，默认返回手牌区的牌
 	 *
-	 * @param {Parameters<this['iterableGetGainableCards']>[0]} player
-	 * @param {Parameters<this['iterableGetGainableCards']>[1]} [arg1]
-	 * @param {Parameters<this['iterableGetGainableCards']>[2]} [arg2]
+	 * @param { Player } player - 进行弃置的角色
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { Card[] } - 经过过滤后的牌的数组
 	 */
-	getGainableCards(player, arg1, arg2) {
-		return Array.from(this.iterableGetGainableCards(player, arg1, arg2));
+	getGainableCards(player, position, filter) {
+		return Array.from(this.iterableGetGainableCards(player, position, filter));
 	}
 	getGainableSkills(func) {
 		var list = [];
@@ -5279,13 +5400,16 @@ export class Player extends HTMLDivElement {
 		return list;
 	}
 	/**
-	 * @param { Parameters<typeof this['iterableGetCards']>[0] } [arg1]
-	 * @param { Parameters<typeof this['iterableGetCards']>[1] } [arg2]
+	 * 返回玩家的牌区中满足条件的牌的数量，默认返回手牌区的牌的数量
+	 *
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { number } - 经过过滤后的牌的数量
 	 */
-	countCards(arg1, arg2) {
+	countCards(position, filter) {
 		let count = 0;
-		for (let item of this.iterableGetCards(arg1, arg2)) {
-			count++;
+		for (const _ of this.iterableGetCards(position, filter)) {
+			++count;
 		}
 		return count;
 	}
@@ -5304,16 +5428,35 @@ export class Player extends HTMLDivElement {
 		}
 		return -1;
 	}
-	countDiscardableCards(player, arg1, arg2) {
-		return this.getDiscardableCards(player, arg1, arg2).length;
+	/**
+	 * 返回玩家的牌区中能被给定角色弃置的牌的数量，默认返回手牌区的牌的数量
+	 *
+	 * @param { Player } player - 进行弃置的角色
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { number } - 经过过滤后的牌的数量
+	 */
+	countDiscardableCards(player, position, filter) {
+		let count = 0;
+		for (const _ of this.iterableGetDiscardableCards(player, position, filter)) {
+			++count;
+		}
+		return count;
 	}
 	/**
-	 * @param {Parameters<this['getGainableCards']>[0]} player
-	 * @param {Parameters<this['getGainableCards']>[1]} [arg1]
-	 * @param {Parameters<this['getGainableCards']>[2]} [arg2]
+	 * 返回玩家的牌区中能被给定角色获得的牌的数量，默认返回手牌区的牌的数量
+	 *
+	 * @param { Player } player - 进行弃置的角色
+	 * @param { string } [position="h"] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } [filter] - 过滤条件，可以是牌名、牌名数组、属性对象或过滤函数
+	 * @returns { number } - 经过过滤后的牌的数量
 	 */
-	countGainableCards(player, arg1, arg2) {
-		return this.getGainableCards(player, arg1, arg2).length;
+	countGainableCards(player, position, filter) {
+		let count = 0;
+		for (const _ of this.iterableGetGainableCards(player, position, filter)) {
+			++count;
+		}
+		return count;
 	}
 	/**
 	 * 返回武将牌上原有的技能
@@ -8299,7 +8442,7 @@ export class Player extends HTMLDivElement {
 				gaintag_map: {},
 				vcard_map: new Map(),
 			};
-			player.checkHistory("lose", function (evt) {
+			player.checkAllHistory("lose", function (evt) {
 				if (evt.parent == that) {
 					map.hs.addArray(evt.hs);
 					map.es.addArray(evt.es);
@@ -8420,7 +8563,7 @@ export class Player extends HTMLDivElement {
 				gaintag_map: {},
 				vcard_map: new Map(),
 			};
-			player.checkHistory("lose", function (evt) {
+			player.checkAllHistory("lose", function (evt) {
 				if (evt.parent == that) {
 					map.hs.addArray(evt.hs);
 					map.es.addArray(evt.es);
@@ -9267,7 +9410,7 @@ export class Player extends HTMLDivElement {
 				gaintag_map: {},
 				vcard_map: new Map(),
 			};
-			player.checkHistory("lose", function (evt) {
+			player.checkAllHistory("lose", function (evt) {
 				if (evt.parent == that) {
 					map.hs.addArray(evt.hs);
 					map.es.addArray(evt.es);
@@ -9355,7 +9498,7 @@ export class Player extends HTMLDivElement {
 				gaintag_map: {},
 				vcard_map: new Map(),
 			};
-			player.checkHistory("lose", function (evt) {
+			player.checkAllHistory("lose", function (evt) {
 				if (evt.parent == that) {
 					map.hs.addArray(evt.hs);
 					map.es.addArray(evt.es);
@@ -12119,7 +12262,7 @@ export class Player extends HTMLDivElement {
 	}
 	/**
 	 * 返回一些牌的攻击距离
-	 * @param { Card[] } cards
+	 * @param { Card[] } [cards]
 	 * @returns { number }
 	 */
 	getEquipRange(cards) {
@@ -13526,15 +13669,16 @@ export class Player extends HTMLDivElement {
 		}
 		return count > _status.event.getRand("mayHaveShan" + hs + this.playerid);
 	}
-	hasCard(name, position) {
-		if (typeof name == "function") {
-			for (let card of this.iterableGetCards(position, name)) {
-				return true;
-			}
-		} else {
-			if (this.countCards(position, name)) {
-				return true;
-			}
+	/**
+	 * 返回玩家是否有某(种牌名的)牌
+	 *
+	 * @param { string | string[] | Record<string, any> | ((card: Card) => boolean) } pattern - 牌名/牌名数组/牌属性/筛选函数
+	 * @param { string } [position] - 牌区，h:手牌区，e:装备区，j:判定区，x:扩展区，s:特殊区(木牛流马牌的位置)
+	 * @returns { boolean }
+	 */
+	hasCard(pattern, position) {
+		for (const _ of this.iterableGetCards(position, pattern)) {
+			return true;
 		}
 		return false;
 	}

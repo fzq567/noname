@@ -1,6 +1,6 @@
 import { lib, game, ui, get, ai, _status } from "noname";
 
-/** @type { importCharacterConfig['skill'] } */
+/** @type { importCharacterConfig["skill"] } */
 const skills = {
 	//曹豹
 	yanjiu: {
@@ -582,7 +582,7 @@ const skills = {
 				player.markAuto(`${event.name}_used`, index);
 				if (index == 0) {
 					const num = game.findPlayer(i => i.isMinHandcard())?.countCards("h");
-					if (!num) {
+					if (num == null) {
 						return;
 					}
 					const numx = num - target.countCards("h");
@@ -2099,7 +2099,7 @@ const skills = {
 					})
 					.set("gainer", target)
 					.set("ai", target => {
-						return get.attitude(get.player(), target) * target.countCards("he");
+						return -get.attitude(get.player(), target) * target.countCards("he");
 					})
 					.forResult();
 				if (result?.targets?.length) {
@@ -7321,63 +7321,67 @@ const skills = {
 			player: "damageEnd",
 			source: "damageSource",
 		},
-		direct: true,
 		filter(event, player) {
 			return event.source && event.player != event.source;
 		},
-		content() {
-			"step 0";
-			event.num = event.triggername == "damageEnd" ? 1 : -1;
-			player.chooseTarget(get.prompt("dcbihuo"), "令一名角色下回合的额定摸牌数" + (event.num > 0 ? "+1" : "-1")).set("ai", function (target) {
-				var player = _status.event.player,
-					num = _status.event.getParent().num;
-				var att = get.attitude(player, target);
-				if (num > 0) {
-					if (att <= 0) {
-						return 0;
+		async cost(event, trigger, player) {
+			const num = event.triggername == "damageEnd" ? 1 : -1;
+			event.result = await player
+				.chooseTarget(get.prompt(event.skill), "令一名角色下回合的额定摸牌数" + (event.num > 0 ? "+1" : "-1"))
+				.set("ai", target => {
+					const { player, numx: num } = get.event();
+					const att = get.attitude(player, target);
+					if (num > 0) {
+						if (att <= 0) {
+							return 0;
+						}
+						if (target.hasJudge("lebu")) {
+							return att / 10;
+						}
+						return (att / Math.sqrt(Math.min(5, 1 + target.countCards("h")))) * Math.sqrt(1 + target.hp);
 					}
-					if (target.hasJudge("lebu")) {
-						return att / 10;
+					if (num < 0) {
+						if (att >= 0) {
+							return 0;
+						}
+						if ((target.storage.dcbihuo_effect || 0) <= -2) {
+							return -att / 10;
+						}
+						return (-att / Math.sqrt(Math.min(5, 1 + target.countCards("h")))) * Math.sqrt(1 + target.hp);
 					}
-					return (att / Math.sqrt(Math.min(5, 1 + target.countCards("h")))) * Math.sqrt(1 + target.hp);
-				}
-				if (num < 0) {
-					if (att >= 0) {
-						return 0;
-					}
-					if ((target.storage.dcbihuo_effect || 0) <= -2) {
-						return -att / 10;
-					}
-					return (-att / Math.sqrt(Math.min(5, 1 + target.countCards("h")))) * Math.sqrt(1 + target.hp);
-				}
-			});
-			"step 1";
-			if (result.bool) {
-				var target = result.targets[0];
-				player.logSkill("dcbihuo", target);
-				if (typeof target.storage.dcbihuo_effect != "number") {
-					target.storage.dcbihuo_effect = 0;
-				}
-				target.storage.dcbihuo_effect += event.num;
-				target.addTempSkill("dcbihuo_effect", { player: "phaseAfter" });
-				game.delayx();
+				})
+				.set("numx", num)
+				.forResult();
+		},
+		async content(event, trigger, player) {
+			const num = event.triggername == "damageEnd" ? 1 : -1;
+			const target = event.targets[0];
+			const effect = event.name + "_effect";
+			if (typeof target.storage[effect] != "number") {
+				target.storage[effect] = 0;
 			}
+			target.storage[effect] += num;
+			target.addTempSkill(effect, { player: "phaseAfter" });
+			target.markSkill(effect);
+			await game.delayx();
 		},
 		subSkill: {
 			effect: {
 				charlotte: true,
-				trigger: { player: "phaseDrawBegin" },
-				forced: true,
 				onremove: true,
-				content() {
-					var num = player.storage.dcbihuo_effect;
+				trigger: { player: "phaseDrawBegin2" },
+				filter(event, player) {
+					return typeof player.storage.dcbihuo_effect == 'number' && !event.numFixed;
+				},
+				forced: true,
+				popup: false,
+				async content(event, trigger, player) {
+					const num = player.countMark(event.name);
 					trigger.num += num;
 					game.log(player, "的额定摸牌数", "#g" + (num >= 0 ? "+" : "") + num);
 				},
 				mark: true,
-				intro: {
-					content: num => "额定摸牌数" + (num >= 0 ? "+" : "") + num,
-				},
+				intro: { content: num => "额定摸牌数" + (num >= 0 ? "+" : "") + num },
 			},
 		},
 	},
@@ -9499,198 +9503,179 @@ const skills = {
 			global: "gainAfter",
 			player: "loseAsyncAfter",
 		},
-		filter(event, player) {
+		filter(event, player, name, target) {
 			if (event.name == "loseAsync") {
 				if (event.type != "gain") {
 					return false;
 				}
 			}
-			var cards = event.getl(player).cards2;
-			return game.hasPlayer(function (current) {
-				if (current == player) {
-					return false;
-				}
-				var cardsx = event.getg(current);
-				for (var i of cardsx) {
-					if (cards.includes(i)) {
-						if (current.isDamaged()) {
-							return true;
-						}
-						return get.color(i, player) == "black";
-					}
-				}
-				return false;
-			});
+			return target?.isIn();
 		},
-		direct: true,
-		content() {
-			"step 0";
-			var cards = trigger.getl(player).cards2;
-			event.cards = cards;
-			event.targets = game
-				.filterPlayer(function (current) {
+		getIndex(event, player) {
+			const cards = event.getl?.(player)?.cards2;
+			if (!cards?.length) {
+				return false;
+			}
+			return game
+				.filterPlayer(current => {
 					if (current == player) {
 						return false;
 					}
-					var cardsx = trigger.getg(current);
-					for (var i of cardsx) {
-						if (cards.includes(i)) {
-							return true;
+					return event.getg?.(current)?.some(card => {
+						if (!cards.includes(card)) {
+							return false;
 						}
-					}
-					return false;
+						return (get.color(card, player) == "red" && current.isDamaged()) || get.color(card, player) == "black";
+					});
 				})
 				.sortBySeat();
-			if (!event.targets.length) {
-				event.finish();
-			}
-			"step 1";
-			var target = targets.shift();
-			var cardsx = trigger.getg(target);
-			var goon = false;
-			for (var i of cardsx) {
-				if (cards.includes(i)) {
-					if (target.isDamaged() || get.color(i, player) == "black") {
-						goon = true;
-						break;
-					}
-				}
-			}
-			if (goon) {
-				var next = game.createEvent("yise_insert");
-				next.player = player;
-				next.target = target;
-				next.cards = cardsx;
-				next.setContent(lib.skill.yise.contentx);
-			}
-			if (targets.length > 0) {
-				event.redo();
-			}
 		},
-		contentx() {
-			"step 0";
-			for (var i of cards) {
-				event[get.color(i, player)] = true;
-				if (event.red && event.black) {
-					break;
-				}
+		async cost(event, trigger, player) {
+			const target = event.indexedData;
+			const colors = ["red", "black"].filter(color => trigger.getg(target).some(card => trigger.getl(player).cards2.includes(card) && get.color(card, player) == color));
+			const result = await player
+				.chooseButton(
+					[
+						get.prompt(event.skill, target),
+						[
+							[
+								["recover", `令${get.translation(target)}回复1点体力`],
+								["damage", `令${get.translation(target)}下次受到【杀】造成的伤害+1`],
+							],
+							"textbutton",
+						],
+					],
+					[1, colors.length]
+				)
+				.set("filterButton", button => {
+					const { player, target, colors } = get.event();
+					const link = button.link;
+					if (link == "recover") {
+						return colors.includes("red") && target.isDamaged();
+					}
+					return colors.includes("black");
+				})
+				.set("ai", button => {
+					const { player, target, colors } = get.event();
+					const link = button.link;
+					if (link == "recover" && get.recoverEffect(target, player, player) > 0) {
+						return 2;
+					}
+					if (link == "damage" && get.attitude(player, target) < 0) {
+						return 1;
+					}
+					return 0;
+				})
+				.set("target", target)
+				.set("colors", colors)
+				.forResult();
+			event.result = {
+				bool: result?.bool,
+				cost_data: result?.links,
+				targets: [target],
+			};
+		},
+		async content(event, trigger, player) {
+			const { indexedData: target, cost_data } = event;
+			if (cost_data.includes("recover")) {
+				await target.recover();
 			}
-			if (event.red && target.isDamaged()) {
-				player.chooseBool(get.prompt("yise", target), "令" + get.translation(target) + "回复1点体力").set("ai", () => get.recoverEffect(_status.event.getParent().target, _status.event.player, _status.event.player) > 0);
-			}
-			"step 1";
-			if (event.black || (event.red && result.bool)) {
-				player.logSkill("yise", target);
-			}
-			if (event.red && result.bool) {
-				target.recover();
-			}
-			if (event.black) {
-				target.addMark("yise_damage", 1, false);
-				target.addSkill("yise_damage");
+			if (cost_data.includes("damage")) {
+				target.addSkill(event.name + "_damage");
+				target.addMark(event.name + "_damage", 1, false);
+				game.log(target, "下一次受到【杀】的伤害", "#g+1");
 			}
 		},
 		subSkill: {
 			damage: {
-				trigger: { player: "damageBegin1" },
-				forced: true,
 				charlotte: true,
 				onremove: true,
+				trigger: { player: "damageBegin3" },
 				filter(event, player) {
-					return event.card && event.card.name == "sha" && event.getParent().name == "sha";
+					return event.card?.name == "sha";
 				},
-				content() {
-					trigger.num += player.countMark("yise_damage");
-					player.removeSkill("yise_damage");
+				forced: true,
+				popup: false,
+				async content(event, trigger, player) {
+					trigger.num += player.countMark(event.name);
+					player.removeSkill(event.name);
 				},
-				intro: {
-					content: "下一次受到杀的伤害+#",
-				},
+				intro: { content: "下一次受到杀的伤害+#" },
 			},
 		},
 	},
 	shunshi: {
 		audio: 2,
 		trigger: { player: ["damageEnd", "phaseZhunbeiBegin"] },
-		direct: true,
 		filter(event, player) {
-			return (
-				(event.name != "damage" || player != _status.currentPhase) &&
-				player.countCards("he") > 0 &&
-				game.hasPlayer(function (current) {
-					return current != player && current != event.source;
-				})
-			);
+			return (event.name != "damage" || player != _status.currentPhase) && player.countCards("he") > 0 && game.hasPlayer(current => current != player && current != event.source);
 		},
-		content() {
-			"step 0";
-			player.chooseCardTarget({
-				prompt: get.prompt("shunshi"),
-				prompt2: "将一张牌交给一名其他角色，并获得+1效果",
-				filterCard: true,
-				filterTarget(card, player, target) {
-					return target != player && target != _status.event.source;
-				},
-				position: "he",
-				source: trigger.source,
-				ai1(card) {
-					var player = _status.event.player;
-					if (player.hasSkill("yise")) {
-						if (
-							get.color(card, player) == "red" &&
-							game.hasPlayer(function (current) {
-								return current != player && current != _status.event.source && current.isDamaged() && get.recoverEffect(current, player, player) > 0;
-							})
-						) {
-							return 10 - get.value(card);
+		async cost(event, trigger, player) {
+			event.result = await player
+				.chooseCardTarget({
+					prompt: get.prompt2(event.skill),
+					filterCard: true,
+					filterTarget(card, player, target) {
+						return target != player && target != _status.event.source;
+					},
+					position: "he",
+					source: trigger.source,
+					ai1(card) {
+						const { player, source } = get.event();
+						if (player.hasSkill("yise")) {
+							if (
+								get.color(card, player) == "red" &&
+								game.hasPlayer(current => {
+									return current != player && current != source && current.isDamaged() && get.recoverEffect(current, player, player) > 0;
+								})
+							) {
+								return 10 - get.value(card);
+							}
+							if (get.color(card, player) == "black") {
+								return 4 - get.value(card);
+							}
 						}
-						if (get.color(card, player) == "black") {
-							return 4 - get.value(card);
+						return 8 - get.value(card);
+					},
+					ai2(target) {
+						const player = get.player(),
+							card = ui.selected.cards[0];
+						if (player.hasSkill("yise")) {
+							if (get.color(card) == "red" && target.isDamaged()) {
+								return 2 * get.recoverEffect(target, player, player);
+							}
+							if (get.color(card) == "black") {
+								return -get.attitude(player, target);
+							}
 						}
-					}
-					return 8 - get.value(card);
-				},
-				ai2(target) {
-					var player = _status.event.player,
-						card = ui.selected.cards[0];
-					if (player.hasSkill("yise")) {
-						if (get.color(card) == "red" && target.isDamaged()) {
-							return 2 * get.recoverEffect(target, player, player);
-						}
-						if (get.color(card) == "black") {
+						if (get.value(card, target) < 0) {
 							return -get.attitude(player, target);
 						}
-					}
-					if (get.value(card, target) < 0) {
-						return -get.attitude(player, target);
-					}
-					if (get.value(card, target) < 1) {
-						return 0.01 * -get.attitude(player, target);
-					}
-					return Math.max(1, get.value(card, target) - get.value(card, player)) * get.attitude(player, target);
-				},
-			});
-			"step 1";
-			if (result.bool) {
-				var target = result.targets[0];
-				player.logSkill("shunshi", target);
-				player.give(result.cards, target);
-				player.addMark("shunshi_mark", 1, false);
-				player.addTempSkill("shunshi_mark", { player: "phaseEnd" });
-			}
+						if (get.value(card, target) < 1) {
+							return 0.01 * -get.attitude(player, target);
+						}
+						return Math.max(1, get.value(card, target) - get.value(card, player)) * get.attitude(player, target);
+					},
+				})
+				.forResult();
+		},
+		async content(event, trigger, player) {
+			await player.give(event.cards, event.targets[0]);
+			player.addMark(event.name + "_mark", 1, false);
+			player.addTempSkill(event.name + "_mark", { player: "phaseEnd" });
 		},
 		subSkill: {
 			mark: {
+				charlotte: true,
 				onremove: true,
 				trigger: { player: "phaseDrawBegin2" },
-				forced: true,
-				charlotte: true,
-				popup: false,
 				filter(event, player) {
 					return !event.numFixed;
 				},
-				content() {
-					trigger.num += player.countMark("shunshi_mark");
+				forced: true,
+				popup: false,
+				async content(event, trigger, player) {
+					trigger.num += player.countMark(event.name);
 				},
 				mod: {
 					maxHandcard(player, num) {
@@ -9702,9 +9687,7 @@ const skills = {
 						}
 					},
 				},
-				intro: {
-					content: "拥有#层效果",
-				},
+				intro: { content: "拥有#层“顺世”效果" },
 			},
 		},
 	},
@@ -12092,6 +12075,9 @@ const skills = {
 				return list;
 			},
 			check(event, player) {
+				if (player.countEnabledSlot() == 1 && player.maxHp <= 3 && player.hasSkill("tuxing")) {
+					return "cancel2";
+				}
 				for (let i = 5; i > 0; i--) {
 					if (player.hasEmptySlot(i)) {
 						return "equip" + i;
@@ -12144,6 +12130,9 @@ const skills = {
 			order: 1,
 			result: {
 				player(player) {
+					if (player.countEnabledSlot() == 1 && player.maxHp <= 3 && player.hasSkill("tuxing")) {
+						return 0;
+					}
 					if (
 						game.hasPlayer(function (target) {
 							if (player == target) {
@@ -12184,34 +12173,31 @@ const skills = {
 	},
 	tuxing: {
 		audio: 2,
-		trigger: { player: "disableEquipAfter" },
+		trigger: { player: "disableEquipEnd" },
 		forced: true,
-		content() {
-			"step 0";
-			player.gainMaxHp();
-			player.recover();
-			"step 1";
+		async content(event, trigger, player) {
+			const num = trigger.slots.length;
+			await player.gainMaxHp(num);
+			await player.recover(num);
 			if (!player.hasEnabledSlot()) {
-				player.loseMaxHp(4);
-				player.addSkill("tuxing2");
+				await player.loseMaxHp(4);
+				player.addSkill(event.name + "_effect");
+				player.addMark(event.name + "_effect", 1, false);
 			}
 		},
-		ai: {
-			combo: "yujue",
-		},
-	},
-	tuxing2: {
-		audio: "tuxing",
-		trigger: { source: "damageBegin1" },
-		forced: true,
-		charlotte: true,
-		sourceSkill: "tuxing",
-		content() {
-			trigger.num++;
-		},
-		mark: true,
-		intro: {
-			content: "造成伤害时，此伤害+1",
+		ai: { combo: "yujue" },
+		subSkill: {
+			effect: {
+				charlotte: true,
+				onremove: true,
+				audio: "tuxing",
+				trigger: { source: "damageBegin1" },
+				forced: true,
+				async content(event, trigger, player) {
+					trigger.num += player.countMark(event.name);
+				},
+				intro: { content: "造成伤害时，此伤害+#" },
+			},
 		},
 	},
 	gongjian: {

@@ -33,7 +33,7 @@ const characters = {
 		sex: "male",
 		group: "wei",
 		hp: 3,
-		skills: ["mbdingzhen", "twyouye"],
+		skills: ["mbdingzhen", "mbyouye"],
 		dieAudios: ["tw_zhangji"],
 	},
 	xin_simayi: {
@@ -1085,7 +1085,7 @@ const characters = {
 	zhangbu: {
 		sex: "male",
 		group: "wu",
-		hp: 3,
+		hp: 4,
 		skills: ["mbchengxiong", "mbwangzhuang"],
 	},
 	mb_wangjing: {

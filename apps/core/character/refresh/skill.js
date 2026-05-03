@@ -1,6 +1,6 @@
 import { lib, game, ui, get, ai, _status } from "noname";
 
-/** @type { importCharacterConfig['skill'] } */
+/** @type { importCharacterConfig["skill"] } */
 const skills = {
 	ollianhuan: {
 		audio: "xinlianhuan",
@@ -14414,33 +14414,28 @@ const skills = {
 	},
 	new_yajiao: {
 		audio: "reyajiao",
-		trigger: {
-			player: "loseEnd",
-		},
+		trigger: { player: ["useCard", "respond"] },
 		frequent: true,
 		filter(event, player) {
-			return player != _status.currentPhase && event.hs && event.hs.length > 0 && ["useCard", "respond"].includes(event.getParent().name);
+			return player != _status.currentPhase;
 		},
 		async content(event, trigger, player) {
-			let result;
-
-			// step 0
-			event.card = get.cards();
+			event.card = get.cards()[0];
 			await player.showCards(event.card);
-			event.same = get.type(event.card, "trick") == get.type(trigger.getParent().card, "trick");
-
-			result = await player
-				.chooseTarget("选择获得此牌的角色", true)
-				.set("ai", function (target) {
-					let att = get.attitude(_status.event.player, target);
-					if (_status.event.du) {
+			event.same = get.type2(event.card) == get.type2(trigger.card);
+			const result = await player
+				.chooseTarget(`涯角：令一名角色获得${get.translation(event.card)}`, true)
+				.set("ai", target => {
+					const { player, du, same } = get.event();
+					let att = get.attitude(player, target);
+					if (du) {
 						if (target.hasSkillTag("nodu")) {
 							return 0;
 						}
 						return -att;
 					}
-					if (!_status.event.same) {
-						att += target == _status.event.player ? 1 : 0;
+					if (!same) {
+						att += target == player ? 1 : 0;
 					}
 					if (att > 0) {
 						return att + Math.max(0, 5 - target.countCards("h"));
@@ -14450,8 +14445,6 @@ const skills = {
 				.set("du", event.card.name == "du")
 				.set("same", event.same)
 				.forResult();
-
-			// step 1
 			if (result?.targets?.length) {
 				player.line(result.targets, "green");
 				await result.targets[0].gain(event.card, "gain2");
@@ -14879,6 +14872,7 @@ const skills = {
 			std_guanxing: "wusheng_guanzhang",
 			ty_guanxing: "wusheng_guanzhang",
 			ol_guanzhang: "wusheng_ol_guanzhang",
+			re_baosanniang: "wusheng_re_baosanniang",
 		},
 		enable: ["chooseToRespond", "chooseToUse"],
 		filterCard(card, player) {
@@ -15420,76 +15414,55 @@ const skills = {
 		trigger: { player: "phaseZhunbeiBegin" },
 		frequent: true,
 		async content(event, trigger, player) {
-			// step 0
 			player.addTempSkill("reluoshen_add");
-			event.cards = [];
 
-			// step 1
-			let result;
-			const next = player.judge(function (card) {
-				if (get.color(card) == "black") {
-					return 1.5;
-				}
-				return -1.5;
-			});
-			next.judge2 = function (result) {
-				return result.bool;
-			};
-
-			let card;
-			if (get.mode() != "guozhan" && !player.hasSkillTag("rejudge")) {
-				next.set("callback", function () {
-					if (event.judgeResult.color == "black" && get.position(card, true) == "o") {
-						player.gain(card, "gain2").gaintag.add("reluoshen");
-					}
+			const cards = new Set();
+			let continuing = false;
+			do {
+				const next = player.judge({
+					judge(card) {
+						return get.color(card) === "black" ? 1.5 : -1.5;
+					},
+					judge2(result) {
+						return result.bool;
+					},
 				});
-			} else {
-				next.set("callback", function () {
-					if (event.judgeResult.color == "black") {
-						event.getParent().orderingCards.remove(card);
-					}
-				});
-			}
-
-			result = await next.forResult();
-
-			// step 2
-			while (true) {
-				if (result.bool) {
-					event.cards.push(result.card);
-					const continueResult = await player.chooseBool("是否再次发动【洛神】？").set("frequentSkill", "reluoshen").forResult();
-
-					// step 3
-					if (continueResult.bool) {
-						result = await next.forResult();
-					} else {
-						for (let i = 0; i < event.cards.length; i++) {
-							if (get.position(event.cards[i], true) != "o") {
-								event.cards.splice(i, 1);
-								i--;
-							}
+				
+				if (get.mode() !== "guozhan" && !player.hasSkillTag("rejudge")) {
+					next.set("callback", async (event, trigger, player) => {
+						if (event.judgeResult.color === "black" && get.position(event.card, true) === "o") {
+							await player.gain({
+								cards: [event.card],
+								gaintag: ["reluoshen"],
+							});
 						}
-						if (event.cards.length) {
-							const next = player.gain(event.cards, "gain2");
-							next.gaintag.add("reluoshen");
-							await next;
-						}
-						break;
-					}
+					});
 				} else {
-					for (let i = 0; i < event.cards.length; i++) {
-						if (get.position(event.cards[i], true) != "o") {
-							event.cards.splice(i, 1);
-							i--;
+					next.set("callback", async (event, trigger, player) => {
+						if (event.judgeResult.color === "black") {
+							event.getParent().orderingCards.remove(event.card);
 						}
-					}
-					if (event.cards.length) {
-						const next = player.gain(event.cards, "gain2");
-						next.gaintag.add("reluoshen");
-						await next;
-					}
+					});
+				}
+
+				const result = await next.forResult();
+
+				if (!result.bool) {
 					break;
 				}
+
+				cards.add(result.card);
+				const continueResult = await player.chooseBool({ prompt: "是否继续进行判定？" }).set("frequentSkill", "reluoshen").forResult();
+				continuing = continueResult.bool;
+			} while (continuing);
+
+			const gainning = [...cards].filter(card => get.position(card, true) === "o");
+			if (gainning.length) {
+				await player.gain({
+					cards: gainning,
+					animate: "gain2",
+					gaintag: ["reluoshen"],
+				});
 			}
 		},
 		subSkill: {

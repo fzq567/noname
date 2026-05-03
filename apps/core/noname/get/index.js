@@ -3106,7 +3106,7 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 			if (obj.every(p => p instanceof lib.element.Card)) {
 				return "cards";
 			}
-			if (obj.every(p => p instanceof lib.element.VCard)) {
+			if (obj.every(p => p instanceof lib.element.VCard || (get.is.object(p) && p.name && p.name in lib.card))) {
 				return "vcards";
 			}
 			if (obj.length == 2) {
@@ -3128,7 +3128,7 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 		if (obj instanceof lib.element.Card) {
 			return "card";
 		}
-		if (obj instanceof lib.element.VCard || (get.is.object(name) && obj.name && obj.name in lib.card)) {
+		if (obj instanceof lib.element.VCard || (get.is.object(obj) && obj.name && obj.name in lib.card)) {
 			return "vcard";
 		}
 		if (obj instanceof lib.element.Player) {
@@ -4137,14 +4137,13 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 	}
 	/**
 	 * 遍历子元素
-	 * @param {HTMLElement} node
+	 * @param {...HTMLElement} elements
 	 * @returns {Iterable<HTMLElement>} 迭代器
 	 */
-	*iterableChildNodes(node) {
-		for (let i = 0; i < arguments.length; i++) {
-			let arg = arguments[i];
-			for (let j = 0; j < arg.childElementCount; j++) {
-				yield arg.childNodes[j];
+	*iterableChildNodes(...elements) {
+		for (const element of elements) {
+			for (const child of element.children) {
+				yield child;
 			}
 		}
 	}
@@ -7181,53 +7180,27 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 		return get.effect(target, { name: "recover" }, player, viewer);
 	}
 	buttonValue(button) {
-		var card = button.link;
-		var player = get.owner(card);
-		if (!player) {
-			player = _status.event.player;
-		}
+		const card = button.link;
+		const player = get.owner(card) || _status.event.player;
 		if (player.getCards("j").includes(card)) {
-			return get.effect(
-				player,
-				{
-					name: card.viewAs || card.name,
-					cards: [card],
-				},
-				player,
-				player
-			);
+			const vcard = get.autoViewAs({ name: card.viewAs || card.name, cards: [card] }, [card]);
+			return get.effect(player, vcard, player, player);
 		}
 		if (player.getCards("e").includes(card)) {
-			var evalue = get.value(card, player);
+			const evalue = get.value(card, player);
 			if (player.hasSkillTag("noe")) {
-				if (evalue >= 7) {
-					return evalue / 6;
-				}
-				return evalue / 10;
+				return evalue / 1145141919810;
 			}
-			return evalue / 3;
+			return evalue;
 		}
 		if (!player.getCards("h").includes(card) || player.hasSkillTag("noh")) {
 			return 0.1;
 		}
-		if (!button.classList.contains("infohidden")) {
+		if (!button.classList?.contains("blank")) {
 			return get.value(card);
 		}
-		var nh = player.countCards("h");
-		switch (nh) {
-			case 1:
-				return 2;
-			case 2:
-				return 1.6;
-			case 3:
-				return 1;
-			case 4:
-				return 0.8;
-			case 5:
-				return 0.6;
-			default:
-				return 0.4;
-		}
+		const nh = player.countCards("h");
+		return 3 * Math.exp(-0.2 * nh) + Math.max(0, 4 - nh) * 0.5 + 0.1;
 	}
 	attitude2(to) {
 		return get.attitude(_status.event.player, to);
