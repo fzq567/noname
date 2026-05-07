@@ -6999,15 +6999,16 @@ const skills = {
 				cards: event.cards,
 				discarder: player,
 			});
+			let related;
 			let used = false;
 			if (player.canUse({ name: "sha", isCard: true }, trigger.player)) {
 				used = true;
-				await player.useCard({
+				related = await player.useCard({
 					card: get.autoViewAs({ name: "sha", isCard: true }),
 					targets: [trigger.player],
 				});
 			}
-			if (!used || !game.hasPlayer2(current => current.getHistory("damage", evt => evt.getParent(2) == related).length > 0)) {
+			if (!used || !game.hasPlayer2(current => current.hasHistory("damage", evt => evt.getParent(2) == related))) {
 				await player.draw();
 			}
 		},
@@ -7313,7 +7314,7 @@ const skills = {
 				animate: "gain2",
 			});
 			if (cards.some(card => get.color(card) === "red")) {
-				await event.target
+				await target
 					.chooseToUse({
 						prompt: "是否使用一张杀？",
 						filterCard: get.filter({ name: "sha" }),
@@ -14238,7 +14239,7 @@ const skills = {
 		},
 		logTarget: "player",
 		async content(event, trigger, player) {
-			const card = event.links[0];
+			const card = event.cards[0];
 			await player.showCards([card], get.translation(player) + "展示的手牌");
 			if (get.type(card) !== "basic") {
 				await trigger.player.discard(card);
