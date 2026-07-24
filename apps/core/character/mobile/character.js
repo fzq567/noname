@@ -1,16 +1,97 @@
 const characters = {
+	zhuji: {
+		sex: "male",
+		group: "wu",
+		hp: 4,
+		skills: ["potjiezhu", "pothuanshi"],
+	},
+	mb_cheliji: {
+		sex: "male",
+		group: "qun",
+		hp: 4,
+		skills: ["mbqucheng", "mbqiangyong"],
+		names: "null|null",
+	},
+	mb_dingshangwan: {
+		sex: "female",
+		group: "wei",
+		hp: 3,
+		skills: ["mbzhaofu", "mbqiliu"],
+	},
+	re_wangji: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		skills: ["reqizhi", "rejinqu"],
+	},
+	re_zhoufei: {
+		sex: "female",
+		group: "wu",
+		hp: 3,
+		skills: ["reliangyin", "rekongsheng"],
+		names: "周|null",
+	},
+	re_yanyan: {
+		sex: "male",
+		group: "shu",
+		hp: 4,
+		skills: ["rejuzhan"],
+	},
+	mb_gaoxiang: {
+		sex: "male",
+		group: "shu",
+		hp: 4,
+		skills: ["mbgxchiyuan", "mberdi"],
+	},
+	mb_cuimao: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		skills: ["mbzhengbi", "mbfengying"],
+		names: "崔|琰-毛|玠",
+	},
+	mb_zhongyao: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		skills: ["rehuomo", "mbzuoding"],
+		clans: ["颍川钟氏"],
+	},
+	mb_wutugu: {
+		sex: "male",
+		group: "qun",
+		hp: 15,
+		skills: ["mbranshang", "mbhanyong"],
+		names: "null|null",
+		dieAudios: ["wutugu"],
+	},
+	mb_chengyu: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		skills: ["mbshefu", "mbbenyu"],
+	},
+	mb_dongbai: {
+		sex: "female",
+		group: "qun",
+		hp: 3,
+		skills: ["mblianzhu", "mbxiahui"],
+		dieAudios: ["dongbai"],
+	},
 	mb_zhugeguo: {
 		sex: "female",
 		group: "shu",
 		hp: 3,
 		skills: ["mbqirang", "mbyuhua"],
 		names: "诸葛|果",
+		dieAudios: ["zhugeguo"],
 	},
 	mb_caochun: {
 		sex: "male",
 		group: "wei",
 		hp: 4,
 		skills: ["mbshanjia"],
+		dieAudios: ["caochun"],
 	},
 	mb_xiahoumao: {
 		sex: "male",
@@ -18,12 +99,6 @@ const characters = {
 		hp: 4,
 		skills: ["mbtongwei", "mbcuguo"],
 		names: "夏侯|楙",
-	},
-	mb_shen_machao: {
-		sex: "male",
-		group: "shen",
-		hp: 4,
-		skills: ["yuli", "tingwei", "jimie"],
 	},
 	o_tadun: {
 		sex: "male",
@@ -976,6 +1051,7 @@ const characters = {
 		group: "wu",
 		hp: 4,
 		skills: ["reqizhou", "reshanxi"],
+		tempname: ["heqi"],
 		dieAudios: ["heqi"],
 	},
 	yangbiao: {
@@ -1270,6 +1346,14 @@ const characters = {
 		skills: ["scsmiaoyu"],
 		isUnseen: true,
 		trashBin: ["sex:male_castrated"],
+	},
+	mb_lingju: {
+		sex: "female",
+		group: "qun",
+		hp: 3,
+		skills: ["mbjieyuan", "mbfenxin"],
+		names: "吕|null",
+		dieAudios: ["lingju"],
 	},
 };
 

@@ -1,4 +1,17 @@
 const characters = {
+	yue_caozhi: {
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		skills: ["dcfuyue", "dcwenlan"],
+	},
+	dc_muludawang: {
+		sex: "male",
+		group: "qun",
+		hp: 5,
+		skills: ["dczhoufa", "dcshouqun"],
+		names: "null|null",
+	},
 	dc_zhangshiping: {
 		sex: "male",
 		group: "qun",
@@ -719,6 +732,13 @@ const characters = {
 		hp: 4,
 		maxHp: 6,
 		skills: ["xuxie"],
+	},
+	dc_xiahouen: {
+		sex: "male",
+		group: "wei",
+		hp: 5,
+		skills: ["chijian", "shiwu"],
+    	names: "夏侯|恩",
 	},
 	re_panfeng: {
 		sex: "male",

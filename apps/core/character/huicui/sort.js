@@ -1,5 +1,5 @@
 const characterSort = {
-	sp_baigei: ["re_panfeng", "xingdaorong", "caoxing", "re_chunyuqiong", "xiahoujie", "dc_caiyang", "zhoushan"],
+	sp_baigei: ["re_panfeng", "xingdaorong", "caoxing", "re_chunyuqiong", "xiahoujie", "dc_caiyang", "zhoushan", "dc_xiahouen"],
 	sp_caizijiaren: ["dc_xiahouxuan", "dc_kongrong", "re_dongbai", "re_sunluyu", "heyan", "zhaoyan", "wangtao", "wangyue", "zhangxuan", "tengyin", "zhangyao", "xiahoulingnv", "dc_sunru", "pangshanmin", "kuaiqi"],
 	sp_zhilan: ["jimiaojimu", "dc_huangwudie", "dc_liuli", "liuyong", "wanniangongzhu", "zhanghu", "lvlingqi", "tenggongzhu", "panghui", "dc_zhaotongzhaoguang", "yuantanyuanxiyuanshang", "yuechen", "panghong"],
 	sp_guixin: ["mamiao", "zangba", "re_kanze", "re_chendeng", "caimaozhangyun", "dc_lvkuanglvxiang", "dc_gaolan", "yinfuren", "chengui", "chenjiao", "dc_sp_jiaxu", "qinlang", "dc_dongzhao", "houcheng"],
@@ -10,8 +10,8 @@ const characterSort = {
 	sp_yanhan: ["dc_zhugejun", "dc_xiangchong", "dc_lifeng", "dc_liuba", "dc_huangquan", "furongfuqian", "xianglang", "dc_huojun", "gaoxiang", "dc_wuban", "jiangfei", "dc_zhangyì"],
 	sp_jishi: ["dc_jiben", "zhenghun", "dc_sunhanhua", "liuchongluojun", "wupu"],
 	sp_raoting: ["dc_weifeng", "dc_huanghao", "dc_sunziliufang", "dc_sunchen", "dc_jiachong"],
-	sp_yijun: ["gongsundu", "mengyou", "dc_sp_menghuo", "gongsunxiu", "dc_sp_zhurong", "dc_mateng"],
-	sp_zhengyin: ["yue_zhouyu", "yue_diaochan", "yue_caiwenji", "yue_zhoufei", "yue_caiyong", "yue_xiaoqiao", "yue_daqiao", "yue_miheng", "yue_zoushi", "yue_zhugeguo"],
+	sp_yijun: ["gongsundu", "mengyou", "dc_sp_menghuo", "gongsunxiu", "dc_sp_zhurong", "dc_mateng", "dc_muludawang"],
+	sp_zhengyin: ["yue_caozhi", "yue_zhouyu", "yue_diaochan", "yue_caiwenji", "yue_zhoufei", "yue_caiyong", "yue_xiaoqiao", "yue_daqiao", "yue_miheng", "yue_zoushi", "yue_zhugeguo"],
 	huicui_waitforsort: [],
 };
 

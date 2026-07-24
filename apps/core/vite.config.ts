@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
 const port = {
-	client: 5173, // 2026-3-27 原始配置默认使用808端口，为避免冲突，在个人仓库中修改为5173端口
+	client: 8081,
 	server: 8089,
 };
 

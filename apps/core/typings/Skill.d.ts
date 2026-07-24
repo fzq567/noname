@@ -63,7 +63,7 @@ declare interface Mod {
 	/**
 	 * 卡牌能否主动弃置
 	 */
-	cardDiscardable?(card: Card, player: Player, eventName: string, result: boolean): boolean | void;
+	cardDiscardable?(card: Card, player: Player, eventName: string | undefined, result: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**
 	 * 卡牌是否可用(卡牌能否被选择)
 	 * 比cardEnabled2更弱一些
@@ -71,7 +71,7 @@ declare interface Mod {
 	 * 适用范围：player.canUse，lib.filter.cardEnabled，默认lib.filter.filterCard
 	 * 
 	 */
-	cardEnabled?(card: Card, player: Player, result: boolean): boolean | void;
+	cardEnabled?(card: Card | VCard | CardBaseUIData, player: Player, event: GameEvent | "forceEnable" | undefined, result: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**
 	 * 卡牌是否可用（适用范围基本可以视为所有情况下）
 	 * 
@@ -79,28 +79,28 @@ declare interface Mod {
 	 * 
 	 * 适用范围：event.backup中技能信息触发（viewAS），cardEnabled（优先于该mod的触发），cardRespondable（优先于该mod的触发），_save（优先于cardSavable的mod触发）中均触发
 	 */
-	cardEnabled2?(card: Card, player: Player, result: boolean): boolean | void;
+	cardEnabled2?(card: Card | VCard | CardBaseUIData, player: Player, event: GameEvent | "forceEnable" | undefined, result: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**卡牌能否被赠与 */
-	cardGiftable?(card: Card, player: Player, target: Player, current: boolean): boolean | void
+	cardGiftable?(card: Card, player: Player, target: Player, current: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**卡牌能否被重铸 */
-	cardRecastable?(card: Card, player: Player, source: Player, result: boolean): boolean | void
+	cardRecastable?(card: Card, player: Player, source: Player, result: boolean | "unchanged"): boolean | "unchanged" | void
 	/**
 	 * 卡牌是否可用（改变卡牌的使用次数）
 	 * 
 	 * 要与cardEnabled一起使用（目前看来两个效果一致）
 	 * 
-	 * @param card  牌
-	 * @param player  玩家
-	 * @param num 使用次数
+	 * @param card - 牌
+	 * @param player - 玩家
+	 * @param num - 使用次数
 	 */
-	cardUsable?(card: Card, player: Player, num: number): boolean | number | void;
+	cardUsable?(card: Card | VCard, player: Player, num: number): boolean | number | void;
 	/**
 	 * 卡牌是否可以响应
 	 * 
 	 * 要与cardEnabled一起使用（目前看来两个效果一致）
 	 * 
 	 */
-	cardRespondable?(card: Card, player: Player, result: boolean): boolean | void;
+	cardRespondable?(card: Card | VCard, player: Player, result: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**
 	 * 卡牌是否可以救人
 	 * 
@@ -112,11 +112,11 @@ declare interface Mod {
 	 * 
 	 * 适用范围：濒死阶段的filterCard
 	 * 
-	 * @param card 牌
-	 * @param player 玩家
-	 * @param taregt 当前处于濒死求救得玩家
+	 * @param card - 牌
+	 * @param player - 玩家
+	 * @param taregt - 当前处于濒死求救得玩家
 	 */
-	cardSavable?(card: Card, player: Player, taregt: Player, reslut: boolean): boolean | void;
+	cardSavable?(card: Card | VCard | CardBaseUIData, player: Player, taregt: Player, result: boolean | "unchanged"): boolean | "unchanged" | void;
 	/** 
 	 * 在全局的防御范围 （globalToYou其他玩家到你的距离）
 	 * 注：防御距离就是要和别人的距离越远，所以，拉开距离需要增加；
@@ -161,21 +161,21 @@ declare interface Mod {
 	/**
 	 * 选择的目标范围,直接对range进行修改即可，无需返回值。
 	 */
-	selectTarget?(card: Card, player: Player, range: Select): void;
+	selectTarget?(card: Card | VCard | CardBaseUIData, player: Player, range: Select): void;
 	/**
 	* 【表示能否成为你的目标，返回true表示必须是你的目标，false不能成为你的目标】
 	* @param card
 	* @param player 源玩家（使用牌的角色）
 	* @param target 目标玩家
 	*/
-	playerEnabled?(card: Card, player: Player, target: Player, result: boolean | "unchanged"): boolean | "unchanged" | void;
+	playerEnabled?(card: Card | VCard | CardBaseUIData, player: Player, target: Player, result: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**
 	* 【表示你能否成为其他角色的目标】 
 	* @param card
 	* @param player 使用牌的角色
 	* @param target 玩家
 	*/
-	targetEnabled?(card: Card, player: Player, target: Player, result: boolean | "unchanged"): boolean | "unchanged" | void;
+	targetEnabled?(card: Card | VCard | CardBaseUIData, player: Player, target: Player, result: boolean | "unchanged"): boolean | "unchanged" | void;
 
 	/**
 	 * 可以指定任意（范围内）目标
@@ -184,7 +184,7 @@ declare interface Mod {
 	 * @param target 目标
 	 * @return 返回bool值可以不接受，范围检测，使用返回的结果;返回number，即计算距离是增加该距离；不返回，默认正常的范围检测
 	 */
-	targetInRange?(card: Card, player: Player, target: Player, result: boolean | number): boolean | number | void;
+	targetInRange?(card: Card | VCard | CardBaseUIData, player: Player, target: Player, result: boolean | "unchanged" | number): boolean | number | "unchanged" | void;
 	/**
 	 * 弃牌阶段时，忽略弃置的手牌
 	 * @param card 
@@ -192,14 +192,14 @@ declare interface Mod {
 	 */
 	ignoredHandcard?(card: Card, player: Player, current: boolean): boolean | void;
 	/** 表示自己牌能否被别人弃置 */
-	canBeDiscarded?(card: Card, player: Player, target: Player, eventName: string, result: boolean): boolean | void;
+	canBeDiscarded?(card: Card | VCard, player: Player, target: Player, eventName: string | undefined, result: boolean | "unchanged"): boolean | "unchanged" | void;
 	/** 
 	 * 自己的牌能否被别人获得
 	 * 装备区的牌能否被移动到其他角色装备区内
 	 */
-	canBeGained?(card: Card, player: Player, target: Player, eventName: string, reslut: boolean): boolean | void;
+	canBeGained?(card: Card, player: Player, target: Player, eventName: string | undefined, reslut: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**往往用于装备牌，能否被顶替 */
-	canBeReplaced?(card: Card, player: Player, current: boolean): boolean | void;
+	canBeReplaced?(card: Card | VCard, player: Player, current: boolean | "unchanged"): boolean | "unchanged" | void;
 	/**
 	 * 改变花色	用于get.suit
 	 */
@@ -229,7 +229,7 @@ declare interface Mod {
 	/** 改变最终花色	用于get.suit*/
 	cardsuit?(card: Card, player: Player, suit: string): string | void;
 	/** 对特定角色使用牌的次数限制（用于优化【对特定角色使用牌无次数限制】的机制）【v1.9.105】 */
-	cardUsableTarget?(card: Card, player: Player, target: Player, result: boolean): boolean | void;
+	cardUsableTarget?(card: Card | VCard | CardBaseUIData, player: Player, target: Player, result: boolean): boolean | void;
 
 	/** 用于get.value，对最后得返回value结果做处理 */
 	aiValue?(player: Player, card: Card, num: number): number | void;
@@ -725,7 +725,7 @@ declare interface Skill {
 	/** 标记显示内容 */
 	intro?: {
 		/** 自定义mark弹窗的显示内容 */
-		mark?: (dialog: Dialog, storage: any, player: Player) => string | void;
+		mark?: (dialog: Dialog, storage: any, player: Player, event: MouseEvent | TouchEvent | PointerEvent, skill: string) => string | void;
 		/** 用于info.mark为“character”，添加，移除标记时，log显示的标记名（好像意义不大） */
 		name?: string | ((arg: any, player: Player) => string);
 		name2?: string | ((arg: any, player: Player) => string);
@@ -1050,9 +1050,9 @@ declare interface Skill {
 	 * @param event 事件，即event._trigger,相当于trigger时机（此时的event为触发该技能时机时的事件）
 	 * @param player 
 	 * @param name 触发名，为event.triggername，目前只有在lib.filter.filterTrigger中才传该值，即被动触发，主动触发不检测该值，目前暂未完善
-	 * @param target v1.10.11 触发的目标
+	 * @param indexedData 由`getIndex`返回的对象
 	 */
-	filter?(event: GameEvent, player: Player, name?: string, target?: Player): boolean | void | null;
+	filter?(event: GameEvent, player: Player, name?: string, indexedData?: any): boolean | void | null;
 	/**
 	 * 选择的目标武将牌上出现什么字。
 	 * 
@@ -1331,9 +1331,9 @@ declare interface Skill {
 	 * 
 	 * 若没有配置prompt，显示该配置的提示
 	 * 
-	 * @param target v1.10.11 触发的目标
+	 * @param indexedData 由`getIndex`返回的对象
 	 */
-	logTarget?: string | ((event?: GameEvent, player?: Player, triggername?: string, target?: Player) => string | Player | Player[] | null | undefined);
+	logTarget?: string | ((event?: GameEvent, player?: Player, triggername?: string, indexedData?: any) => string | Player | Player[] | null | undefined);
 	/**
 	 * 是否通过logTarget显示触发者的目标日志；
 	 * 
@@ -1417,7 +1417,7 @@ declare interface Skill {
 	 * 无参，简洁写法；
 	 */
 	check?: ((card: Card) => number | boolean | void) |
-	((event: GameEvent, player: Player, triggername?: string, target?: Player) => number | boolean | void) |
+	((event: GameEvent, player: Player, triggername?: string, indexedData?: any) => number | boolean | void) |
 	(() => number | boolean | void);
 	// check?(...any:any):number|boolean;
 	// /** ai用于检测的方法：用于主动使用触发技能 */
@@ -1482,7 +1482,7 @@ declare interface Skill {
 	 * 
 	 * 如果返回值为数组或任意可遍历对象，则会分别结算每个目标；目标将存放在`event.indexedData`中，供cost和content使用。
 	 */
-	getIndex?<T>(event: GameEvent, player: Player, triggername: string): number | Iterable<T>;
+	getIndex?(event: GameEvent, player: Player, triggername: string): number | Iterable<any>;
 
 	/**
 	 * 持恒技

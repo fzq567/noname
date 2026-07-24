@@ -1,4 +1,9 @@
 export default {
+	"#olpingyuan1": "发石为锋，夷平敌军土山！",
+	"#olpingyuan2": "献此奇械，山石壁垒何足惧。",
+	"#olliaoyi1": "君之所谋，吾已了然于胸。",
+	"#olliaoyi2": "徒劳之举，吾早有应对之策。",
+	"#ol_liuye:die": "料尽天下事，难料吾之归途……",
 	"#xiaoxi_hansui1": "两军交战，勇者为胜！",
 	"#xiaoxi_hansui2": "打你个措手不及！",
 	"#xiaoxi_machao1": "快马突袭！",
@@ -1044,4 +1049,8 @@ export default {
 	"#xinfu_zhanji2": "功曹之恩，吾必有展骥之机。",
 	"#mifuren:die": "阿斗被救，妾身再无牵挂……",
 	"#zoushi:die": "年老色衰了吗？",
+	"#oltaohuai1": "让开，刚出炉香喷喷的胡饼来咯！",
+	"#oltaohuai2": "你这恶狼，饶你一命还想吃我肥羊嘞？",
+	"#oltaohuai3": "弟兄们，暗打狐子明打狼！",
+	"#ol_duanwei:die": "去去去，地主家也没余粮了。",
 };
